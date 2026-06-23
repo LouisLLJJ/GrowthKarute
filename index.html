@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>育成カルテ</title>
+  <style>
+    :root {
+      --ink: #1f2a2e;
+      --muted: #66767d;
+      --line: #d9e0df;
+      --paper: #fbfbf8;
+      --panel: #ffffff;
+      --brand: #16746a;
+      --brand-soft: #e6f3f0;
+      --amber: #b67213;
+      --amber-soft: #fff4dd;
+      --rose: #b94d5a;
+      --rose-soft: #fdecef;
+      --shadow: 0 18px 50px rgba(31, 42, 46, 0.1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "Segoe UI", "Yu Gothic UI", "Hiragino Sans", Meiryo, sans-serif;
+    }
+    button, input, textarea, select { font: inherit; font-size: 16px; }
+    button { border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    svg { width: 19px; height: 19px; flex: 0 0 auto; }
+    .hidden { display: none !important; }
+    .auth-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+    }
+    .auth-card, .editor {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .auth-card {
+      width: min(100%, 440px);
+      display: grid;
+      gap: 14px;
+    }
+    .auth-card h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
+    .auth-sub, .hint, .brand p, .title-block p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 13px;
+    }
+    .app { min-height: 100vh; display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); }
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .brand, .person-top, .header, .footer, .auth-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 25px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      box-shadow: 0 10px 24px rgba(22, 116, 106, 0.22);
+    }
+    .button {
+      min-height: 44px;
+      border-radius: 8px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      font-weight: 800;
+    }
+    .button.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .button.danger { color: var(--rose); }
+    .auth-actions { display: grid; gap: 10px; }
+    .auth-mode {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+    .auth-mode button {
+      min-height: 38px;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .auth-mode button.active {
+      background: #fff;
+      color: var(--brand);
+      box-shadow: 0 4px 14px rgba(31, 42, 46, 0.08);
+    }
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 12px;
+      outline: none;
+    }
+    textarea { min-height: 138px; resize: vertical; line-height: 1.6; }
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(22, 116, 106, 0.68);
+      box-shadow: 0 0 0 3px var(--brand-soft);
+    }
+    .sync-bar {
+      min-height: 36px;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+    .sync-bar.demo { color: var(--amber); background: var(--amber-soft); }
+    .mobile-switch {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .switch-button {
+      min-height: 38px;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .switch-button.active { color: #fff; background: var(--brand); }
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 0 12px;
+      min-height: 46px;
+    }
+    .search svg { color: var(--muted); }
+    .search input { border: 0; padding-inline: 0; }
+    .people { display: flex; flex-direction: column; gap: 10px; overflow: auto; padding: 2px; }
+    .person-card {
+      width: 100%;
+      min-height: 96px;
+      text-align: left;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+      color: var(--ink);
+    }
+    .person-card.active {
+      border-color: rgba(22, 116, 106, 0.6);
+      box-shadow: 0 0 0 3px var(--brand-soft);
+    }
+    .person-name { font-weight: 800; word-break: break-word; }
+    .status {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--brand);
+      background: var(--brand-soft);
+      white-space: nowrap;
+    }
+    .status.watch { color: var(--amber); background: var(--amber-soft); }
+    .status.urgent { color: var(--rose); background: var(--rose-soft); }
+    .person-summary {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      min-height: 38px;
+      overflow-wrap: anywhere;
+    }
+    .main { padding: 28px; overflow: auto; }
+    .header { align-items: flex-start; margin-bottom: 18px; }
+    .title-block { min-width: 0; }
+    .title-row { display: flex; align-items: center; gap: 10px; }
+    .back-list {
+      display: none;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      place-items: center;
+    }
+    h2 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 38px);
+      line-height: 1.15;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .summary-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .metric {
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      min-height: 84px;
+    }
+    .metric span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .metric strong { font-size: 22px; letter-spacing: 0; }
+    .identity { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .field-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fcfdfc;
+      display: grid;
+      gap: 10px;
+    }
+    .field-card.wide { grid-column: 1 / -1; }
+    .field-title { display: flex; align-items: center; gap: 9px; color: var(--ink); font-weight: 900; }
+    .field-title svg { color: var(--brand); }
+    .progress-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 12px; align-items: center; }
+    input[type="range"] { padding: 0; accent-color: var(--brand); min-height: 34px; }
+    .progress-number {
+      text-align: center;
+      font-weight: 900;
+      color: var(--brand);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      background: var(--brand-soft);
+    }
+    .footer { margin-top: 16px; color: var(--muted); font-size: 13px; }
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      background: var(--ink);
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      transform: translateY(120%);
+      opacity: 0;
+      transition: 0.2s ease;
+      z-index: 10;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    @media (max-width: 960px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--line); max-height: 430px; }
+      .people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .summary-strip, .identity, .fields { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .app { display: block; min-height: 100svh; }
+      .mobile-switch { display: grid; position: sticky; top: 0; z-index: 5; }
+      .sidebar, .main { padding: 14px; }
+      .sidebar { min-height: 100svh; max-height: none; border-bottom: 0; }
+      .main { display: none; padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+      body.mobile-editor .sidebar { display: none; }
+      body.mobile-editor .main { display: block; }
+      .brand h1 { font-size: 23px; }
+      .brand p { font-size: 12px; }
+      .people { display: flex; flex-direction: column; overflow: visible; }
+      .person-card { min-height: 88px; padding: 13px; }
+      .header { display: grid; gap: 12px; }
+      .title-row { align-items: flex-start; }
+      .back-list { display: grid; }
+      h2 { font-size: 28px; padding-top: 3px; }
+      .title-block p { display: none; }
+      .actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 4;
+        justify-content: stretch;
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+        background: rgba(251, 251, 248, 0.94);
+        border-top: 1px solid var(--line);
+        backdrop-filter: blur(16px);
+      }
+      .button { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 0 10px; }
+      .summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .metric { min-height: 72px; padding: 11px; }
+      .metric strong { font-size: 20px; }
+      .editor { box-shadow: none; padding: 12px; }
+      .field-card { padding: 12px; }
+      textarea { min-height: 160px; }
+      .progress-row { grid-template-columns: minmax(0, 1fr) 64px; }
+      .footer { display: grid; }
+      .toast { left: 14px; right: 14px; bottom: calc(76px + env(safe-area-inset-bottom)); text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <section class="auth-screen" id="authScreen">
+    <form class="auth-card" id="loginForm">
+      <div>
+        <h1>育成カルテ</h1>
+        <p class="auth-sub" id="authLead">URLを開いた人が、自分のメールとパスワードで登録できます。</p>
+      </div>
+      <div class="auth-mode" aria-label="ログイン方法">
+        <button class="active" id="showSignup" type="button">新規登録</button>
+        <button id="showLogin" type="button">ログイン</button>
+      </div>
+      <label>メールアドレス<input id="email" type="email" autocomplete="email" placeholder="name@example.com"></label>
+      <label>パスワード<input id="password" type="password" autocomplete="current-password" placeholder="6文字以上で設定"></label>
+      <div class="auth-actions">
+        <button class="button primary" id="authSubmit" type="submit">登録して入る</button>
+        <button class="button" id="demoMode" type="button">デモとして開く</button>
+      </div>
+      <p class="hint" id="authHint">院長にはURLだけ渡せます。院長本人が自分のメールで登録します。</p>
+    </form>
+  </section>
+
+  <div class="app hidden" id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div>
+          <h1>育成カルテ</h1>
+          <p>院長と共有する、スタッフごとの成長の方向性と想いの記録。</p>
+        </div>
+        <button class="icon-button" id="addPerson" title="スタッフを追加" aria-label="スタッフを追加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div class="auth-top">
+        <div class="sync-bar demo" id="syncState">デモ保存</div>
+        <button class="button" id="logout" type="button">退出</button>
+      </div>
+      <div class="mobile-switch" aria-label="表示切替">
+        <button class="switch-button active" id="showList" type="button">一覧</button>
+        <button class="switch-button" id="showEditor" type="button">カルテ</button>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+        <input id="search" type="search" placeholder="スタッフを検索">
+      </div>
+      <div class="people" id="people"></div>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div class="title-block">
+          <div class="title-row">
+            <button class="back-list" id="backList" type="button" aria-label="一覧に戻る">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <h2 id="screenTitle">スタッフ名</h2>
+          </div>
+          <p id="screenSubtitle">育成テーマ、願望、面談メモ、進捗、次の一手を院長と共有します。</p>
+        </div>
+        <div class="actions">
+          <button class="button" id="duplicatePerson" type="button">複製</button>
+          <button class="button primary" id="save" type="button">保存</button>
+        </div>
+      </header>
+
+      <section class="summary-strip" aria-label="全体の状態">
+        <div class="metric"><span>登録スタッフ</span><strong id="metricCount">0名</strong></div>
+        <div class="metric"><span>平均進捗</span><strong id="metricAverage">0%</strong></div>
+        <div class="metric"><span>要確認</span><strong id="metricWatch">0名</strong></div>
+        <div class="metric"><span>最終更新</span><strong id="metricUpdated">-</strong></div>
+      </section>
+
+      <section class="editor">
+        <div class="identity">
+          <label>スタッフ名<input id="name" placeholder="例：佐藤さん"></label>
+          <label>
+            状態
+            <select id="status">
+              <option value="steady">順調</option>
+              <option value="watch">要確認</option>
+              <option value="urgent">早めに相談</option>
+            </select>
+          </label>
+          <label>最終面談日<input id="lastMeeting" type="date"></label>
+        </div>
+        <div class="fields">
+          <div class="field-card">
+            <div class="field-title">育成テーマ</div>
+            <textarea id="theme" placeholder="今伸ばしたい役割、任せたい仕事、期待する姿"></textarea>
+          </div>
+          <div class="field-card">
+            <div class="field-title">願望</div>
+            <textarea id="wish" placeholder="本人が大事にしていそうなこと、働く動機、なりたい姿の仮説"></textarea>
+          </div>
+          <div class="field-card wide">
+            <div class="field-title">面談メモ</div>
+            <textarea id="memo" placeholder="話した内容、院長の見立て、自分の見立て、次回確認したいこと"></textarea>
+          </div>
+          <div class="field-card">
+            <div class="field-title">進捗</div>
+            <div class="progress-row">
+              <input id="progress" type="range" min="0" max="100" step="5">
+              <div class="progress-number" id="progressValue">0%</div>
+            </div>
+            <textarea id="progressNote" placeholder="できていること、変化、気になるサイン"></textarea>
+          </div>
+          <div class="field-card">
+            <div class="field-title">次の一手</div>
+            <textarea id="nextStep" placeholder="次に試す関わり、任せる仕事、院長と確認すること"></textarea>
+          </div>
+        </div>
+        <div class="footer">
+          <span id="saveState">自動保存は未実行です</span>
+          <button class="button danger" id="clearAll" type="button">初期データに戻す</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast">保存しました</div>
+
+  <script type="module">
+    import { supabaseConfig } from "./supabase-config.js";
+
+    const storageKey = "growth-karute-supabase-v1";
+    const isSupabaseConfigured = supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes("YOUR_");
+    const docId = "default";
+    const initialPeople = [
+      {
+        id: crypto.randomUUID(),
+        name: "佐藤さん",
+        status: "steady",
+        lastMeeting: "2026-06-10",
+        theme: "後輩に基本手技を教える役割へ少しずつ広げる。本人の丁寧さを、チーム全体の標準化に活かしたい。",
+        wish: "患者さんに安心してもらえる存在でいたい気持ちが強い。認められる場面があると前向きに動ける。",
+        memo: "院長：最近の説明がわかりやすくなっている。\n自分：責任が増える場面では少し緊張が見える。小さく任せて成功体験を作る。",
+        progress: 70,
+        progressNote: "声かけは安定。後輩からの質問対応も増えている。忙しい時間帯はまだ抱え込みやすい。",
+        nextStep: "来週から新人のチェックリスト確認を一部任せる。院長から一言、任せたい理由を伝えてもらう。",
+        updatedAt: Date.now()
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "鈴木さん",
+        status: "watch",
+        lastMeeting: "2026-06-04",
+        theme: "基礎業務の安定化。質問しやすい状態を保ちながら、できる範囲を明確に増やす。",
+        wish: "失敗せずに迷惑をかけたくない気持ちが強そう。安心して確認できる関係性が先に必要。",
+        memo: "最近質問が減っている。理解が進んだ可能性もあるが、遠慮している可能性もある。次回は困る場面を具体的に聞く。",
+        progress: 45,
+        progressNote: "基本動作は改善。判断が必要な場面で止まりやすい。表情が硬い日がある。",
+        nextStep: "終業前に5分だけ確認時間を作る。できたことを先に確認してから、迷った場面を聞く。",
+        updatedAt: Date.now() - 86400000
+      }
+    ];
+
+    const state = {
+      people: [],
+      activeId: "",
+      query: "",
+      mobileView: "list",
+      authMode: "signup",
+      demo: !isSupabaseConfigured,
+      user: null,
+      applyingRemote: false,
+      channel: null,
+      session: null
+    };
+    let pollTimer = 0;
+    let saveTimer = 0;
+
+    const els = {
+      authScreen: document.querySelector("#authScreen"),
+      app: document.querySelector("#app"),
+      loginForm: document.querySelector("#loginForm"),
+      authLead: document.querySelector("#authLead"),
+      showSignup: document.querySelector("#showSignup"),
+      showLogin: document.querySelector("#showLogin"),
+      authSubmit: document.querySelector("#authSubmit"),
+      email: document.querySelector("#email"),
+      password: document.querySelector("#password"),
+      authHint: document.querySelector("#authHint"),
+      demoMode: document.querySelector("#demoMode"),
+      logout: document.querySelector("#logout"),
+      syncState: document.querySelector("#syncState"),
+      people: document.querySelector("#people"),
+      addPerson: document.querySelector("#addPerson"),
+      duplicatePerson: document.querySelector("#duplicatePerson"),
+      save: document.querySelector("#save"),
+      search: document.querySelector("#search"),
+      screenTitle: document.querySelector("#screenTitle"),
+      screenSubtitle: document.querySelector("#screenSubtitle"),
+      metricCount: document.querySelector("#metricCount"),
+      metricAverage: document.querySelector("#metricAverage"),
+      metricWatch: document.querySelector("#metricWatch"),
+      metricUpdated: document.querySelector("#metricUpdated"),
+      saveState: document.querySelector("#saveState"),
+      clearAll: document.querySelector("#clearAll"),
+      toast: document.querySelector("#toast"),
+      showList: document.querySelector("#showList"),
+      showEditor: document.querySelector("#showEditor"),
+      backList: document.querySelector("#backList"),
+      fields: {
+        name: document.querySelector("#name"),
+        status: document.querySelector("#status"),
+        lastMeeting: document.querySelector("#lastMeeting"),
+        theme: document.querySelector("#theme"),
+        wish: document.querySelector("#wish"),
+        memo: document.querySelector("#memo"),
+        progress: document.querySelector("#progress"),
+        progressNote: document.querySelector("#progressNote"),
+        nextStep: document.querySelector("#nextStep")
+      },
+      progressValue: document.querySelector("#progressValue")
+    };
+
+    function showApp() {
+      els.authScreen.classList.add("hidden");
+      els.app.classList.remove("hidden");
+      render();
+    }
+    function showAuth() {
+      els.app.classList.add("hidden");
+      els.authScreen.classList.remove("hidden");
+    }
+    function toast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      window.setTimeout(() => els.toast.classList.remove("show"), 1300);
+    }
+    function nowTime() {
+      return new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+    }
+    function loadLocal() {
+      const saved = localStorage.getItem(storageKey);
+      state.people = saved ? JSON.parse(saved) : initialPeople;
+      state.activeId = state.people[0]?.id || "";
+    }
+    function saveLocal(showToast = false) {
+      localStorage.setItem(storageKey, JSON.stringify(state.people));
+      els.saveState.textContent = "端末内に保存 " + nowTime();
+      updateSyncState();
+      if (showToast) toast("保存しました");
+    }
+    function authHeaders(withSession = true) {
+      const headers = {
+        "apikey": supabaseConfig.anonKey,
+        "Content-Type": "application/json"
+      };
+      if (withSession && state.session?.access_token) {
+        headers.Authorization = `Bearer ${state.session.access_token}`;
+      }
+      return headers;
+    }
+    async function requestSupabase(path, options = {}, withSession = true) {
+      const response = await fetch(`${supabaseConfig.url}${path}`, {
+        ...options,
+        headers: {
+          ...authHeaders(withSession),
+          ...(options.headers || {})
+        }
+      });
+      if (!response.ok) {
+        let message = "Supabaseへの接続に失敗しました";
+        try {
+          const body = await response.json();
+          message = body.msg || body.message || body.error_description || message;
+        } catch {}
+        throw new Error(message);
+      }
+      if (response.status === 204) return null;
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    }
+    function saveSession(session) {
+      state.session = session;
+      state.user = session?.user || null;
+      localStorage.setItem(`${storageKey}-session`, JSON.stringify(session));
+    }
+    function loadSession() {
+      try {
+        const session = JSON.parse(localStorage.getItem(`${storageKey}-session`) || "null");
+        if (session?.access_token && session?.user) saveSession(session);
+      } catch {
+        localStorage.removeItem(`${storageKey}-session`);
+      }
+    }
+    async function signIn(email, password) {
+      const session = await requestSupabase("/auth/v1/token?grant_type=password", {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      }, false);
+      saveSession(session);
+      return session.user;
+    }
+    async function signUp(email, password) {
+      const result = await requestSupabase("/auth/v1/signup", {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      }, false);
+      if (result?.access_token) {
+        saveSession(result);
+        return result.user;
+      }
+      if (result?.user) {
+        throw new Error("確認メールを開いてからログインしてください。");
+      }
+      throw new Error("登録できませんでした。");
+    }
+    async function loadRemote() {
+      const data = await requestSupabase(`/rest/v1/growth_karute_documents?id=eq.${docId}&select=people`);
+      const row = Array.isArray(data) ? data[0] : null;
+      if (Array.isArray(row?.people)) {
+        state.people = row.people;
+      } else {
+        state.people = initialPeople;
+        await saveRemote(false);
+      }
+      state.activeId = state.people[0]?.id || "";
+    }
+    async function saveRemote(showToast = false) {
+      if (state.demo || state.applyingRemote) return;
+      await requestSupabase("/rest/v1/growth_karute_documents", {
+        method: "POST",
+        headers: { "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({
+          id: docId,
+          people: state.people,
+          updated_by: state.user?.id || null,
+          updated_at: new Date().toISOString()
+        })
+      });
+      els.saveState.textContent = "Supabaseに保存 " + nowTime();
+      updateSyncState();
+      if (showToast) toast("共有保存しました");
+    }
+    function persist(showToast = false) {
+      saveLocal(false);
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => {
+        if (state.demo) saveLocal(showToast);
+        else saveRemote(showToast).catch(() => {
+          els.saveState.textContent = "保存エラー";
+          toast("保存できませんでした");
+        });
+      }, 350);
+    }
+    function subscribeRemote() {
+      window.clearInterval(pollTimer);
+      pollTimer = window.setInterval(async () => {
+        if (state.demo || isEditingField()) return;
+        try {
+          const activeId = state.activeId;
+          const before = JSON.stringify(state.people);
+          await loadRemote();
+          if (JSON.stringify(state.people) === before) return;
+          state.activeId = state.people.some((person) => person.id === activeId) ? activeId : state.people[0]?.id || "";
+          localStorage.setItem(storageKey, JSON.stringify(state.people));
+          render();
+          els.saveState.textContent = "共有データを反映 " + nowTime();
+        } catch {}
+      }, 4000);
+    }
+    function updateSyncState() {
+      if (state.demo) {
+        els.syncState.textContent = "デモ保存";
+        els.syncState.classList.add("demo");
+      } else {
+        els.syncState.textContent = state.user?.email || "Supabase同期";
+        els.syncState.classList.remove("demo");
+      }
+    }
+    function activePerson() {
+      return state.people.find((person) => person.id === state.activeId) || state.people[0];
+    }
+    function statusLabel(status) {
+      return { steady: "順調", watch: "要確認", urgent: "早めに相談" }[status] || "順調";
+    }
+    function shortText(text) {
+      const compact = String(text || "").replace(/\s+/g, " ").trim();
+      return compact ? compact.slice(0, 64) + (compact.length > 64 ? "..." : "") : "まだ記録がありません";
+    }
+    function isMobile() {
+      return window.matchMedia("(max-width: 700px)").matches;
+    }
+    function isEditingField() {
+      return ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
+    }
+    function setMobileView(view) {
+      state.mobileView = view;
+      document.body.classList.toggle("mobile-editor", view === "editor");
+      els.showList.classList.toggle("active", view === "list");
+      els.showEditor.classList.toggle("active", view === "editor");
+      if (isMobile()) window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    function renderPeople() {
+      const query = state.query.trim().toLowerCase();
+      const filtered = state.people.filter((person) => [person.name, person.theme, person.wish, person.nextStep].join(" ").toLowerCase().includes(query));
+      els.people.innerHTML = "";
+      filtered.forEach((person) => {
+        const card = document.createElement("button");
+        card.className = "person-card" + (person.id === state.activeId ? " active" : "");
+        card.type = "button";
+        card.innerHTML = `
+          <div class="person-top">
+            <div class="person-name"></div>
+            <span class="status ${person.status}">${statusLabel(person.status)}</span>
+          </div>
+          <div class="person-summary"></div>
+        `;
+        card.querySelector(".person-name").textContent = person.name || "未入力";
+        card.querySelector(".person-summary").textContent = shortText(person.theme || person.nextStep);
+        card.addEventListener("click", () => {
+          saveActiveFromForm();
+          state.activeId = person.id;
+          render();
+          if (isMobile()) setMobileView("editor");
+        });
+        els.people.appendChild(card);
+      });
+    }
+    function renderForm() {
+      const person = activePerson();
+      if (!person) return;
+      state.activeId = person.id;
+      els.screenTitle.textContent = person.name || "未入力のスタッフ";
+      els.screenSubtitle.textContent = person.theme ? shortText(person.theme) : "育成テーマ、願望、面談メモ、進捗、次の一手を記録します。";
+      Object.entries(els.fields).forEach(([key, input]) => {
+        input.value = person[key] ?? "";
+      });
+      els.progressValue.textContent = `${person.progress || 0}%`;
+    }
+    function renderMetrics() {
+      const count = state.people.length;
+      const average = count ? Math.round(state.people.reduce((sum, person) => sum + Number(person.progress || 0), 0) / count) : 0;
+      const watch = state.people.filter((person) => person.status !== "steady").length;
+      const latest = state.people.reduce((max, person) => Math.max(max, Number(person.updatedAt || 0)), 0);
+      els.metricCount.textContent = `${count}名`;
+      els.metricAverage.textContent = `${average}%`;
+      els.metricWatch.textContent = `${watch}名`;
+      els.metricUpdated.textContent = latest ? new Date(latest).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "-";
+    }
+    function render() {
+      renderPeople();
+      renderForm();
+      renderMetrics();
+      updateSyncState();
+      setMobileView(state.mobileView);
+    }
+    function saveActiveFromForm() {
+      const person = activePerson();
+      if (!person) return;
+      Object.entries(els.fields).forEach(([key, input]) => {
+        person[key] = key === "progress" ? Number(input.value) : input.value;
+      });
+      person.updatedAt = Date.now();
+      persist(false);
+    }
+    function addPerson() {
+      saveActiveFromForm();
+      const person = {
+        id: crypto.randomUUID(),
+        name: "新しいスタッフ",
+        status: "steady",
+        lastMeeting: "",
+        theme: "",
+        wish: "",
+        memo: "",
+        progress: 0,
+        progressNote: "",
+        nextStep: "",
+        updatedAt: Date.now()
+      };
+      state.people.unshift(person);
+      state.activeId = person.id;
+      persist(true);
+      render();
+      if (isMobile()) setMobileView("editor");
+    }
+    function duplicatePerson() {
+      saveActiveFromForm();
+      const person = activePerson();
+      if (!person) return;
+      const copy = { ...person, id: crypto.randomUUID(), name: `${person.name || "スタッフ"} のコピー`, updatedAt: Date.now() };
+      state.people.unshift(copy);
+      state.activeId = copy.id;
+      persist(true);
+      render();
+    }
+    async function bootDemo() {
+      state.demo = true;
+      state.user = null;
+      loadLocal();
+      showApp();
+      saveLocal(false);
+    }
+    async function bootUser(user) {
+      state.demo = false;
+      state.user = user;
+      await loadRemote();
+      subscribeRemote();
+      showApp();
+      persist(false);
+    }
+    function setAuthMode(mode) {
+      state.authMode = mode;
+      const signup = mode === "signup";
+      els.showSignup.classList.toggle("active", signup);
+      els.showLogin.classList.toggle("active", !signup);
+      els.authSubmit.textContent = signup ? "登録して入る" : "ログイン";
+      els.password.placeholder = signup ? "6文字以上で設定" : "登録したパスワード";
+      els.authLead.textContent = signup
+        ? "URLを開いた人が、自分のメールとパスワードで登録できます。"
+        : "登録済みのメールとパスワードでログインします。";
+      els.authHint.textContent = signup
+        ? "院長にはURLだけ渡せます。院長本人が自分のメールで登録します。"
+        : "すでに登録済みの場合はこちらから入れます。";
+    }
+
+    Object.values(els.fields).forEach((field) => {
+      field.addEventListener("input", () => {
+        if (field.id === "progress") els.progressValue.textContent = `${field.value}%`;
+        saveActiveFromForm();
+        renderPeople();
+        renderMetrics();
+        els.screenTitle.textContent = activePerson()?.name || "未入力のスタッフ";
+      });
+    });
+    els.addPerson.addEventListener("click", addPerson);
+    els.duplicatePerson.addEventListener("click", duplicatePerson);
+    els.save.addEventListener("click", () => {
+      saveActiveFromForm();
+      render();
+      persist(true);
+    });
+    els.search.addEventListener("input", (event) => {
+      state.query = event.target.value;
+      renderPeople();
+    });
+    els.clearAll.addEventListener("click", () => {
+      if (!confirm("入力した内容を消して初期データに戻しますか？")) return;
+      state.people = initialPeople.map((person) => ({ ...person, id: crypto.randomUUID(), updatedAt: Date.now() }));
+      state.activeId = state.people[0]?.id || "";
+      persist(true);
+      render();
+    });
+    els.showList.addEventListener("click", () => setMobileView("list"));
+    els.showEditor.addEventListener("click", () => setMobileView("editor"));
+    els.backList.addEventListener("click", () => setMobileView("list"));
+    window.addEventListener("resize", () => setMobileView(isMobile() ? state.mobileView : "list"));
+    els.demoMode.addEventListener("click", bootDemo);
+    els.showSignup.addEventListener("click", () => setAuthMode("signup"));
+    els.showLogin.addEventListener("click", () => setAuthMode("login"));
+    els.loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!isSupabaseConfigured) {
+        els.authHint.textContent = "supabase-config.js を設定してからログインできます。";
+        return;
+      }
+      const email = els.email.value.trim();
+      const password = els.password.value;
+      if (!email || password.length < 6) {
+        els.authHint.textContent = "メールアドレスと6文字以上のパスワードを入力してください。";
+        return;
+      }
+      els.authSubmit.disabled = true;
+      els.authHint.textContent = state.authMode === "signup" ? "登録しています..." : "ログインしています...";
+      try {
+        const user = state.authMode === "signup" ? await signUp(email, password) : await signIn(email, password);
+        await bootUser(user);
+      } catch (error) {
+        els.authHint.textContent = error.message || "処理できませんでした。入力内容を確認してください。";
+      } finally {
+        els.authSubmit.disabled = false;
+      }
+    });
+    els.logout.addEventListener("click", async () => {
+      window.clearInterval(pollTimer);
+      localStorage.removeItem(`${storageKey}-session`);
+      state.session = null;
+      state.user = null;
+      showAuth();
+    });
+
+    setAuthMode("signup");
+    if (isSupabaseConfigured) {
+      els.demoMode.classList.add("hidden");
+      loadSession();
+      if (state.session?.user) await bootUser(state.session.user).catch(() => showAuth());
+      else showAuth();
+    } else {
+      els.demoMode.classList.remove("hidden");
+      els.authHint.textContent = "Supabase未設定です。まずはデモとして開けます。";
+      showAuth();
+    }
+  </script>
+</body>
+</html>
