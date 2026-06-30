@@ -628,6 +628,26 @@
         localStorage.removeItem(`${storageKey}-session`);
       }
     }
+    async function loadSessionFromUrl() {
+      const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+      if (!accessToken) return false;
+      const user = await requestSupabase("/auth/v1/user", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }, false);
+      saveSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_type: params.get("token_type") || "bearer",
+        expires_in: Number(params.get("expires_in") || 0),
+        user
+      });
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      els.authHint.textContent = "メール確認が完了しました。アプリを開いています。";
+      return true;
+    }
     async function signIn(email, password) {
       const session = await requestSupabase("/auth/v1/token?grant_type=password", {
         method: "POST",
@@ -648,7 +668,7 @@
       }
       if (result?.user || result?.id || result?.email) {
         setAuthMode("login");
-        throw new Error("確認メールを開いてからログインしてください。");
+        throw new Error("確認メールを開くと、そのままアプリに入れます。入れない場合はログインを押してください。");
       }
       throw new Error("登録できませんでした。");
     }
@@ -930,6 +950,9 @@
     setAuthMode("signup");
     if (isSupabaseConfigured) {
       els.demoMode.classList.add("hidden");
+      await loadSessionFromUrl().catch(() => {
+        els.authHint.textContent = "メール確認は完了しました。ログインを押してください。";
+      });
       loadSession();
       if (state.session?.user) await bootUser(state.session.user).catch(() => showAuth());
       else showAuth();
