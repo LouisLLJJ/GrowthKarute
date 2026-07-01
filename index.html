@@ -378,6 +378,10 @@
         <h1>育成カルテ</h1>
         <p class="auth-sub" id="authLead">登録済みのメールで入ります。</p>
       </div>
+      <div class="auth-mode" aria-label="ログイン方法">
+        <button class="active" id="showLogin" type="button">ログイン</button>
+        <button id="showSignup" type="button">新規登録</button>
+      </div>
       <label>メールアドレス<input id="email" type="email" autocomplete="email" placeholder="name@example.com"></label>
       <label>パスワード<input id="password" type="password" autocomplete="current-password" placeholder="6文字以上で設定"></label>
       <div class="auth-actions">
@@ -519,6 +523,8 @@
       app: document.querySelector("#app"),
       loginForm: document.querySelector("#loginForm"),
       authLead: document.querySelector("#authLead"),
+      showLogin: document.querySelector("#showLogin"),
+      showSignup: document.querySelector("#showSignup"),
       authSubmit: document.querySelector("#authSubmit"),
       email: document.querySelector("#email"),
       password: document.querySelector("#password"),
@@ -771,8 +777,23 @@
       saveSession(session);
       return session.user;
     }
+    async function signUp(email, password) {
+      const redirectTo = `${window.location.origin}${window.location.pathname}`;
+      const result = await requestSupabase(`/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`, {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      }, false);
+      if (result?.access_token) {
+        saveSession(result);
+        return result.user;
+      }
+      if (result?.user || result?.id || result?.email) {
+        throw new Error("登録しました。確認メールが届いた場合は、メール内のリンクを開いてください。");
+      }
+      throw new Error("登録できませんでした。");
+    }
     async function enterWithEmail(email, password) {
-      return signIn(email, password);
+      return state.authMode === "signup" ? signUp(email, password) : signIn(email, password);
     }
     async function loadRemote() {
       const data = await requestSupabase(`/rest/v1/growth_karute_documents?id=eq.${docId}&select=people`);
@@ -1125,6 +1146,17 @@
         els.authHint.textContent = error.message || "許可されたアカウントでログインしてください。";
       }
     }
+    function setAuthMode(mode) {
+      state.authMode = mode;
+      const signup = mode === "signup";
+      els.showLogin.classList.toggle("active", !signup);
+      els.showSignup.classList.toggle("active", signup);
+      els.authSubmit.textContent = signup ? "新規登録" : "入る";
+      els.authLead.textContent = signup ? "許可を受けたメールで登録します。" : "登録済みのメールで入ります。";
+      els.authHint.textContent = signup
+        ? "登録後、許可メールだけカルテを開けます。"
+        : "許可されたアカウントだけ入れます。";
+    }
     Object.values(els.fields).filter((field) => field !== els.fields.periodMonth).forEach((field) => {
       field.addEventListener("input", () => {
         saveActiveFromForm();
@@ -1168,6 +1200,8 @@
     els.backList.addEventListener("click", () => setMobileView("list"));
     window.addEventListener("resize", () => setMobileView(isMobile() ? state.mobileView : "list"));
     els.demoMode.addEventListener("click", bootDemo);
+    els.showLogin.addEventListener("click", () => setAuthMode("login"));
+    els.showSignup.addEventListener("click", () => setAuthMode("signup"));
     els.loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!isSupabaseConfigured) {
@@ -1177,16 +1211,16 @@
       const email = els.email.value.trim();
       const password = els.password.value;
       if (!email || password.length < 6) {
-        els.authHint.textContent = "登録済みのメールと6文字以上のパスワードを入力してください。";
+        els.authHint.textContent = "メールと6文字以上のパスワードを入力してください。";
         return;
       }
       els.authSubmit.disabled = true;
-      els.authHint.textContent = "確認しています...";
+      els.authHint.textContent = state.authMode === "signup" ? "登録しています..." : "確認しています...";
       try {
         const user = await enterWithEmail(email, password);
         await bootUser(user);
       } catch (error) {
-        els.authHint.textContent = error.message || "登録済みのメールとパスワードを確認してください。";
+        els.authHint.textContent = error.message || "メールとパスワードを確認してください。";
       } finally {
         els.authSubmit.disabled = false;
       }
@@ -1200,6 +1234,7 @@
     });
 
     if (isSupabaseConfigured) {
+      setAuthMode("login");
       els.demoMode.classList.add("hidden");
       await loadSessionFromUrl().catch(() => {
         els.authHint.textContent = "メール確認は完了しました。ログインを押してください。";
