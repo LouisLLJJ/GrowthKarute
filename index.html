@@ -274,6 +274,42 @@
     .field-card.wide { grid-column: 1 / -1; }
     .field-title { display: flex; align-items: center; gap: 9px; color: var(--ink); font-weight: 900; }
     .field-title svg { color: var(--brand); }
+    .history-tools { display: flex; justify-content: flex-end; }
+    .history-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 2px;
+    }
+    .history-entry {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+      display: grid;
+      gap: 7px;
+    }
+    .history-entry-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .text-button {
+      background: transparent;
+      color: var(--rose);
+      padding: 4px 0;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .history-entry p {
+      margin: 0;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
     .footer { margin-top: 16px; color: var(--muted); font-size: 13px; }
     .toast {
       position: fixed;
@@ -428,11 +464,21 @@
           <div class="field-card wide">
             <div class="field-title">面談報告</div>
             <label>面談日<input id="interviewDate" type="date"></label>
+            <label>面談した人<input id="interviewerName"></label>
             <textarea id="interviewReport"></textarea>
+            <div class="history-tools">
+              <button class="button" id="addInterview" type="button">面談記録に追加</button>
+            </div>
+            <div class="history-list" id="interviewHistory"></div>
           </div>
-          <div class="field-card">
+          <div class="field-card wide">
             <div class="field-title">院長からの育成オーダー</div>
+            <label>オーダー日<input id="orderDate" type="date"></label>
             <textarea id="directorOrder"></textarea>
+            <div class="history-tools">
+              <button class="button" id="addOrder" type="button">育成オーダーに追加</button>
+            </div>
+            <div class="history-list" id="orderHistory"></div>
           </div>
           <div class="field-card">
             <div class="field-title">OKR</div>
@@ -497,6 +543,10 @@
       saveState: document.querySelector("#saveState"),
       clearAll: document.querySelector("#clearAll"),
       toast: document.querySelector("#toast"),
+      addInterview: document.querySelector("#addInterview"),
+      interviewHistory: document.querySelector("#interviewHistory"),
+      addOrder: document.querySelector("#addOrder"),
+      orderHistory: document.querySelector("#orderHistory"),
       showList: document.querySelector("#showList"),
       showEditor: document.querySelector("#showEditor"),
       backList: document.querySelector("#backList"),
@@ -507,14 +557,16 @@
         theme: document.querySelector("#theme"),
         wish: document.querySelector("#wish"),
         interviewDate: document.querySelector("#interviewDate"),
+        interviewerName: document.querySelector("#interviewerName"),
         interviewReport: document.querySelector("#interviewReport"),
+        orderDate: document.querySelector("#orderDate"),
         directorOrder: document.querySelector("#directorOrder"),
         okr: document.querySelector("#okr")
       }
     };
 
     const profileFields = ["name", "condition"];
-    const recordFields = ["theme", "wish", "interviewDate", "interviewReport", "directorOrder", "okr"];
+    const recordFields = ["theme", "wish", "interviewDate", "interviewerName", "interviewReport", "orderDate", "directorOrder", "okr"];
 
     function currentMonth() {
       return new Date().toISOString().slice(0, 7);
@@ -523,7 +575,20 @@
       return dateValue ? String(dateValue).slice(0, 7) : currentMonth();
     }
     function emptyRecord() {
-      return { theme: "", wish: "", interviewDate: "", interviewReport: "", directorOrder: "", okr: "" };
+      return {
+        theme: "",
+        wish: "",
+        interviewDate: "",
+        interviewerName: "",
+        interviewReport: "",
+        interviewEntries: [],
+        interviewMigrated: true,
+        orderDate: "",
+        directorOrder: "",
+        orderEntries: [],
+        orderMigrated: true,
+        okr: ""
+      };
     }
     function ensurePersonShape(person) {
       if (!person.records || Array.isArray(person.records) || typeof person.records !== "object") {
@@ -533,8 +598,12 @@
             theme: person.theme || "",
             wish: person.wish || "",
             interviewDate: person.interviewDate || person.lastMeeting || "",
+            interviewerName: person.interviewerName || "",
             interviewReport: person.interviewReport || person.memo || "",
+            interviewEntries: [],
+            orderDate: person.orderDate || "",
             directorOrder: person.directorOrder || person.nextStep || "",
+            orderEntries: [],
             okr: person.okr || ""
           }
         };
@@ -553,8 +622,31 @@
           record.interviewDate = record.interviewDate || person.lastMeeting || "";
           record.theme = record.theme || "";
           record.wish = record.wish || "";
+          record.interviewerName = record.interviewerName || "";
           record.interviewReport = record.interviewReport || "";
+          record.interviewEntries = Array.isArray(record.interviewEntries) ? record.interviewEntries : [];
+          if (record.interviewReport && !record.interviewEntries.length && !record.interviewMigrated) {
+            record.interviewEntries.push({
+              id: crypto.randomUUID(),
+              date: record.interviewDate || "",
+              person: record.interviewerName || "",
+              text: record.interviewReport,
+              createdAt: Date.now()
+            });
+          }
+          record.interviewMigrated = true;
+          record.orderDate = record.orderDate || "";
           record.directorOrder = record.directorOrder || "";
+          record.orderEntries = Array.isArray(record.orderEntries) ? record.orderEntries : [];
+          if (record.directorOrder && !record.orderEntries.length && !record.orderMigrated) {
+            record.orderEntries.push({
+              id: crypto.randomUUID(),
+              date: record.orderDate || "",
+              text: record.directorOrder,
+              createdAt: Date.now()
+            });
+          }
+          record.orderMigrated = true;
           record.okr = record.okr || "";
         }
       });
@@ -802,6 +894,38 @@
       const compact = String(text || "").replace(/\s+/g, " ").trim();
       return compact ? compact.slice(0, 64) + (compact.length > 64 ? "..." : "") : "まだ記録がありません";
     }
+    function dateLabel(value) {
+      if (!value) return "日付なし";
+      const date = new Date(`${value}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleDateString("ja-JP", { year: "numeric", month: "numeric", day: "numeric" });
+    }
+    function sortedEntries(entries) {
+      return [...(Array.isArray(entries) ? entries : [])].sort((a, b) => {
+        const dateCompare = String(b.date || "").localeCompare(String(a.date || ""));
+        if (dateCompare) return dateCompare;
+        return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+      });
+    }
+    function renderHistory(container, entries, kind) {
+      container.innerHTML = "";
+      sortedEntries(entries).forEach((entry) => {
+        const item = document.createElement("div");
+        item.className = "history-entry";
+        item.innerHTML = `
+          <div class="history-entry-top">
+            <span></span>
+            <button class="text-button" type="button">削除</button>
+          </div>
+          <p></p>
+        `;
+        const names = kind === "interview" && entry.person ? ` / ${entry.person}` : "";
+        item.querySelector("span").textContent = `${dateLabel(entry.date)}${names}`;
+        item.querySelector("p").textContent = entry.text || "";
+        item.querySelector("button").addEventListener("click", () => deleteHistoryEntry(kind, entry.id));
+        container.appendChild(item);
+      });
+    }
     function isMobile() {
       return window.matchMedia("(max-width: 700px)").matches;
     }
@@ -819,7 +943,9 @@
       const query = state.query.trim().toLowerCase();
       const filtered = state.people.filter((person) => {
         const record = activeRecord(person);
-        return [person.name, record.theme, record.wish, record.directorOrder, record.okr].join(" ").toLowerCase().includes(query);
+        const interviewText = sortedEntries(record.interviewEntries).map((entry) => [entry.date, entry.person, entry.text].join(" ")).join(" ");
+        const orderText = sortedEntries(record.orderEntries).map((entry) => [entry.date, entry.text].join(" ")).join(" ");
+        return [person.name, record.theme, record.wish, record.directorOrder, record.okr, interviewText, orderText].join(" ").toLowerCase().includes(query);
       });
       els.people.innerHTML = "";
       filtered.forEach((person) => {
@@ -853,6 +979,8 @@
         Object.values(els.fields).forEach((input) => {
           input.value = "";
         });
+        els.interviewHistory.innerHTML = "";
+        els.orderHistory.innerHTML = "";
         return;
       }
       ensurePersonShape(person);
@@ -867,6 +995,8 @@
       recordFields.forEach((key) => {
         els.fields[key].value = record[key] ?? "";
       });
+      renderHistory(els.interviewHistory, record.interviewEntries, "interview");
+      renderHistory(els.orderHistory, record.orderEntries, "order");
     }
     function renderMetrics() {
       const count = state.people.length;
@@ -916,6 +1046,57 @@
       persist(true);
       render();
       if (isMobile()) setMobileView("editor");
+    }
+    function addInterviewEntry() {
+      saveActiveFromForm();
+      const person = activePerson();
+      if (!person) return;
+      const record = activeRecord(person);
+      const text = els.fields.interviewReport.value.trim();
+      if (!text) {
+        toast("面談報告を入力してください");
+        return;
+      }
+      record.interviewEntries.unshift({
+        id: crypto.randomUUID(),
+        date: els.fields.interviewDate.value || "",
+        person: els.fields.interviewerName.value.trim(),
+        text,
+        createdAt: Date.now()
+      });
+      person.updatedAt = Date.now();
+      persist(true);
+      renderForm();
+    }
+    function addOrderEntry() {
+      saveActiveFromForm();
+      const person = activePerson();
+      if (!person) return;
+      const record = activeRecord(person);
+      const text = els.fields.directorOrder.value.trim();
+      if (!text) {
+        toast("育成オーダーを入力してください");
+        return;
+      }
+      record.orderEntries.unshift({
+        id: crypto.randomUUID(),
+        date: els.fields.orderDate.value || "",
+        text,
+        createdAt: Date.now()
+      });
+      person.updatedAt = Date.now();
+      persist(true);
+      renderForm();
+    }
+    function deleteHistoryEntry(kind, id) {
+      const person = activePerson();
+      if (!person || !id) return;
+      const record = activeRecord(person);
+      const key = kind === "interview" ? "interviewEntries" : "orderEntries";
+      record[key] = (record[key] || []).filter((entry) => entry.id !== id);
+      person.updatedAt = Date.now();
+      persist(true);
+      renderForm();
     }
     function duplicatePerson() {
       saveActiveFromForm();
@@ -970,6 +1151,8 @@
     });
     els.addPerson.addEventListener("click", addPerson);
     els.duplicatePerson.addEventListener("click", duplicatePerson);
+    els.addInterview.addEventListener("click", addInterviewEntry);
+    els.addOrder.addEventListener("click", addOrderEntry);
     els.save.addEventListener("click", () => {
       saveActiveFromForm();
       render();
