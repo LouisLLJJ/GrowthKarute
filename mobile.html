@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>育成カルテ</title>
+</head>
+<body>
+  <script>
+    const target = new URL("./", window.location.href);
+    target.searchParams.set("mobile", "1");
+    window.location.replace(target.pathname + target.search + window.location.hash);
+  </script>
+</body>
+</html>
