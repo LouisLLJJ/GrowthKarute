@@ -202,8 +202,17 @@
       border-color: rgba(22, 116, 106, 0.6);
       box-shadow: 0 0 0 3px var(--brand-soft);
     }
+    .person-card.care {
+      border-color: rgba(182, 114, 19, 0.62);
+      background: #fffaf0;
+    }
+    .person-card.risk {
+      border-color: rgba(185, 77, 90, 0.72);
+      background: #fff5f6;
+      box-shadow: 0 0 0 3px var(--rose-soft);
+    }
     .person-name { font-weight: 800; word-break: break-word; }
-    .signal {
+    .condition {
       border-radius: 999px;
       padding: 4px 8px;
       font-size: 12px;
@@ -211,8 +220,8 @@
       background: var(--brand-soft);
       white-space: nowrap;
     }
-    .signal.talk { color: var(--amber); background: var(--amber-soft); }
-    .signal.soon { color: var(--rose); background: var(--rose-soft); }
+    .condition.care { color: var(--amber); background: var(--amber-soft); }
+    .condition.risk { color: var(--rose); background: var(--rose-soft); }
     .person-summary {
       color: var(--muted);
       font-size: 13px;
@@ -390,7 +399,7 @@
 
       <section class="summary-strip" aria-label="全体">
         <div class="metric"><span>登録スタッフ</span><strong id="metricCount">0名</strong></div>
-        <div class="metric"><span>早めに話す</span><strong id="metricTalk">0名</strong></div>
+        <div class="metric"><span>注意・危険</span><strong id="metricAlert">0名</strong></div>
         <div class="metric"><span>最終更新</span><strong id="metricUpdated">-</strong></div>
       </section>
 
@@ -398,11 +407,11 @@
         <div class="identity">
           <label>スタッフ名<input id="name"></label>
           <label>
-            共有サイン
-            <select id="communication">
-              <option value="normal">通常</option>
-              <option value="talk">近いうちに話す</option>
-              <option value="soon">早めに話す</option>
+            コンディション
+            <select id="condition">
+              <option value="stable">通常</option>
+              <option value="care">注意</option>
+              <option value="risk">危険</option>
             </select>
           </label>
           <label>見る月<input id="periodMonth" type="month"></label>
@@ -483,7 +492,7 @@
       screenTitle: document.querySelector("#screenTitle"),
       screenSubtitle: document.querySelector("#screenSubtitle"),
       metricCount: document.querySelector("#metricCount"),
-      metricTalk: document.querySelector("#metricTalk"),
+      metricAlert: document.querySelector("#metricAlert"),
       metricUpdated: document.querySelector("#metricUpdated"),
       saveState: document.querySelector("#saveState"),
       clearAll: document.querySelector("#clearAll"),
@@ -493,7 +502,7 @@
       backList: document.querySelector("#backList"),
       fields: {
         name: document.querySelector("#name"),
-        communication: document.querySelector("#communication"),
+        condition: document.querySelector("#condition"),
         periodMonth: document.querySelector("#periodMonth"),
         theme: document.querySelector("#theme"),
         wish: document.querySelector("#wish"),
@@ -504,7 +513,7 @@
       }
     };
 
-    const profileFields = ["name", "communication"];
+    const profileFields = ["name", "condition"];
     const recordFields = ["theme", "wish", "interviewDate", "interviewReport", "directorOrder", "okr"];
 
     function currentMonth() {
@@ -531,8 +540,12 @@
         };
       }
       person.activeMonth = person.activeMonth || monthFromDate(person.lastMeeting);
-      if (!person.communication) {
-        person.communication = person.status === "urgent" ? "soon" : person.status === "watch" ? "talk" : "normal";
+      if (!person.condition) {
+        person.condition = person.communication === "soon" || person.status === "urgent"
+          ? "risk"
+          : person.communication === "talk" || person.status === "watch"
+            ? "care"
+            : "stable";
       }
       if (!person.records[person.activeMonth]) person.records[person.activeMonth] = emptyRecord();
       Object.values(person.records).forEach((record) => {
@@ -552,6 +565,7 @@
       delete person.progressNote;
       delete person.nextStep;
       delete person.lastMeeting;
+      delete person.communication;
       delete person.status;
       return person;
     }
@@ -738,12 +752,14 @@
         if (state.demo || isEditingField()) return;
         try {
           const activeId = state.activeId;
-          const before = JSON.stringify(state.people);
+          const beforePeople = JSON.parse(JSON.stringify(state.people));
+          const before = JSON.stringify(beforePeople);
           await loadRemote();
           if (JSON.stringify(state.people) === before) return;
           state.activeId = state.people.some((person) => person.id === activeId) ? activeId : state.people[0]?.id || "";
           localStorage.setItem(storageKey, JSON.stringify(state.people));
           render();
+          conditionChangeAlerts(beforePeople, state.people).forEach((person) => notifyCondition(person, person.condition));
           els.saveState.textContent = "共有データを反映 " + nowTime();
         } catch {}
       }, 4000);
@@ -760,8 +776,27 @@
     function activePerson() {
       return state.people.find((person) => person.id === state.activeId) || state.people[0];
     }
-    function signalLabel(value) {
-      return { normal: "通常", talk: "近いうち", soon: "早めに話す" }[value] || "通常";
+    function conditionLabel(value) {
+      return { stable: "通常", care: "注意", risk: "危険" }[value] || "通常";
+    }
+    function conditionRank(value) {
+      return { stable: 0, care: 1, risk: 2 }[value] || 0;
+    }
+    function notifyCondition(person, condition) {
+      const message = `${person.name || "未入力"}：${conditionLabel(condition)}`;
+      toast(message);
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted") {
+        new Notification("育成カルテ", { body: message });
+      } else if (Notification.permission === "default") {
+        Notification.requestPermission().then((permission) => {
+          if (permission === "granted") new Notification("育成カルテ", { body: message });
+        });
+      }
+    }
+    function conditionChangeAlerts(beforePeople, afterPeople) {
+      const beforeMap = new Map(beforePeople.map((person) => [person.id, person.condition || "stable"]));
+      return afterPeople.filter((person) => conditionRank(person.condition) > conditionRank(beforeMap.get(person.id) || "stable"));
     }
     function shortText(text) {
       const compact = String(text || "").replace(/\s+/g, " ").trim();
@@ -789,12 +824,12 @@
       els.people.innerHTML = "";
       filtered.forEach((person) => {
         const card = document.createElement("button");
-        card.className = "person-card" + (person.id === state.activeId ? " active" : "");
+        card.className = `person-card ${person.condition || "stable"}` + (person.id === state.activeId ? " active" : "");
         card.type = "button";
         card.innerHTML = `
           <div class="person-top">
             <div class="person-name"></div>
-            <span class="signal ${person.communication || "normal"}">${signalLabel(person.communication)}</span>
+            <span class="condition ${person.condition || "stable"}">${conditionLabel(person.condition)}</span>
           </div>
           <div class="person-summary"></div>
         `;
@@ -835,10 +870,10 @@
     }
     function renderMetrics() {
       const count = state.people.length;
-      const talk = state.people.filter((person) => ["talk", "soon"].includes(person.communication)).length;
+      const alert = state.people.filter((person) => ["care", "risk"].includes(person.condition)).length;
       const latest = state.people.reduce((max, person) => Math.max(max, Number(person.updatedAt || 0)), 0);
       els.metricCount.textContent = `${count}名`;
-      els.metricTalk.textContent = `${talk}名`;
+      els.metricAlert.textContent = `${alert}名`;
       els.metricUpdated.textContent = latest ? new Date(latest).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "-";
     }
     function render() {
@@ -871,7 +906,7 @@
       const person = {
         id: crypto.randomUUID(),
         name: "新しいスタッフ",
-        communication: "normal",
+        condition: "stable",
         activeMonth: currentMonth(),
         records: { [currentMonth()]: emptyRecord() },
         updatedAt: Date.now()
