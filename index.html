@@ -203,6 +203,16 @@
       box-shadow: 0 0 0 3px var(--brand-soft);
     }
     .person-name { font-weight: 800; word-break: break-word; }
+    .signal {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--brand);
+      background: var(--brand-soft);
+      white-space: nowrap;
+    }
+    .signal.talk { color: var(--amber); background: var(--amber-soft); }
+    .signal.soon { color: var(--rose); background: var(--rose-soft); }
     .person-summary {
       color: var(--muted);
       font-size: 13px;
@@ -232,7 +242,7 @@
       overflow-wrap: anywhere;
     }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-    .summary-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .summary-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
     .metric {
       background: rgba(255, 255, 255, 0.86);
       border: 1px solid var(--line);
@@ -242,7 +252,7 @@
     }
     .metric span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
     .metric strong { font-size: 22px; letter-spacing: 0; }
-    .identity { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .identity { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
     .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
     .field-card {
       border: 1px solid var(--line);
@@ -380,12 +390,21 @@
 
       <section class="summary-strip" aria-label="全体">
         <div class="metric"><span>登録スタッフ</span><strong id="metricCount">0名</strong></div>
+        <div class="metric"><span>早めに話す</span><strong id="metricTalk">0名</strong></div>
         <div class="metric"><span>最終更新</span><strong id="metricUpdated">-</strong></div>
       </section>
 
       <section class="editor">
         <div class="identity">
           <label>スタッフ名<input id="name"></label>
+          <label>
+            共有サイン
+            <select id="communication">
+              <option value="normal">通常</option>
+              <option value="talk">近いうちに話す</option>
+              <option value="soon">早めに話す</option>
+            </select>
+          </label>
           <label>見る月<input id="periodMonth" type="month"></label>
         </div>
         <div class="fields">
@@ -464,6 +483,7 @@
       screenTitle: document.querySelector("#screenTitle"),
       screenSubtitle: document.querySelector("#screenSubtitle"),
       metricCount: document.querySelector("#metricCount"),
+      metricTalk: document.querySelector("#metricTalk"),
       metricUpdated: document.querySelector("#metricUpdated"),
       saveState: document.querySelector("#saveState"),
       clearAll: document.querySelector("#clearAll"),
@@ -473,6 +493,7 @@
       backList: document.querySelector("#backList"),
       fields: {
         name: document.querySelector("#name"),
+        communication: document.querySelector("#communication"),
         periodMonth: document.querySelector("#periodMonth"),
         theme: document.querySelector("#theme"),
         wish: document.querySelector("#wish"),
@@ -483,7 +504,7 @@
       }
     };
 
-    const profileFields = ["name"];
+    const profileFields = ["name", "communication"];
     const recordFields = ["theme", "wish", "interviewDate", "interviewReport", "directorOrder", "okr"];
 
     function currentMonth() {
@@ -510,6 +531,9 @@
         };
       }
       person.activeMonth = person.activeMonth || monthFromDate(person.lastMeeting);
+      if (!person.communication) {
+        person.communication = person.status === "urgent" ? "soon" : person.status === "watch" ? "talk" : "normal";
+      }
       if (!person.records[person.activeMonth]) person.records[person.activeMonth] = emptyRecord();
       Object.values(person.records).forEach((record) => {
         if (record && typeof record === "object") {
@@ -532,9 +556,9 @@
       return person;
     }
     function isSamplePerson(person) {
-      const text = JSON.stringify(person.records || {});
       return ["佐藤さん", "鈴木さん"].includes(person.name || "")
-        && /後輩に基本手技|基礎業務の安定化|患者さんに安心|最近質問が減っている/.test(text);
+        && person.activeMonth === "2026-06"
+        && Object.keys(person.records || {}).length === 1;
     }
     function normalizePeople(people) {
       return (Array.isArray(people) ? people : initialPeople).map(ensurePersonShape).filter((person) => !isSamplePerson(person));
@@ -736,6 +760,9 @@
     function activePerson() {
       return state.people.find((person) => person.id === state.activeId) || state.people[0];
     }
+    function signalLabel(value) {
+      return { normal: "通常", talk: "近いうち", soon: "早めに話す" }[value] || "通常";
+    }
     function shortText(text) {
       const compact = String(text || "").replace(/\s+/g, " ").trim();
       return compact ? compact.slice(0, 64) + (compact.length > 64 ? "..." : "") : "まだ記録がありません";
@@ -767,6 +794,7 @@
         card.innerHTML = `
           <div class="person-top">
             <div class="person-name"></div>
+            <span class="signal ${person.communication || "normal"}">${signalLabel(person.communication)}</span>
           </div>
           <div class="person-summary"></div>
         `;
@@ -807,8 +835,10 @@
     }
     function renderMetrics() {
       const count = state.people.length;
+      const talk = state.people.filter((person) => ["talk", "soon"].includes(person.communication)).length;
       const latest = state.people.reduce((max, person) => Math.max(max, Number(person.updatedAt || 0)), 0);
       els.metricCount.textContent = `${count}名`;
+      els.metricTalk.textContent = `${talk}名`;
       els.metricUpdated.textContent = latest ? new Date(latest).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "-";
     }
     function render() {
@@ -841,6 +871,7 @@
       const person = {
         id: crypto.randomUUID(),
         name: "新しいスタッフ",
+        communication: "normal",
         activeMonth: currentMonth(),
         records: { [currentMonth()]: emptyRecord() },
         updatedAt: Date.now()
