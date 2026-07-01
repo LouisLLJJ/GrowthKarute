@@ -932,7 +932,6 @@
       document.body.classList.toggle("mobile-editor", view === "editor");
       els.showList.classList.toggle("active", view === "list");
       els.showEditor.classList.toggle("active", view === "editor");
-      if (isMobile()) window.scrollTo({ top: 0, behavior: "smooth" });
     }
     function renderPeople() {
       const query = state.query.trim().toLowerCase();
