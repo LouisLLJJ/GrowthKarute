@@ -409,9 +409,9 @@
           <label>
             コンディション
             <select id="condition">
-              <option value="stable">(^_^) 好調</option>
-              <option value="care">(-_-) 普通</option>
-              <option value="risk">(&gt;_&lt;) 不調</option>
+              <option value="stable">好調</option>
+              <option value="care">普通</option>
+              <option value="risk">不調</option>
             </select>
           </label>
           <label>見る月<input id="periodMonth" type="month"></label>
@@ -777,7 +777,7 @@
       return state.people.find((person) => person.id === state.activeId) || state.people[0];
     }
     function conditionLabel(value) {
-      return { stable: "(^_^) 好調", care: "(-_-) 普通", risk: "(>_<) 不調" }[value] || "(^_^) 好調";
+      return { stable: "好調", care: "普通", risk: "不調" }[value] || "好調";
     }
     function conditionRank(value) {
       return { stable: 0, care: 1, risk: 2 }[value] || 0;
