@@ -49,7 +49,7 @@
       gap: 14px;
     }
     .auth-card h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
-    .auth-sub, .hint, .brand p, .title-block p {
+    .auth-sub, .hint {
       margin: 7px 0 0;
       color: var(--muted);
       line-height: 1.55;
@@ -341,14 +341,12 @@
       body.mobile-editor .sidebar { display: none; }
       body.mobile-editor .main { display: block; }
       .brand h1 { font-size: 23px; }
-      .brand p { font-size: 12px; }
       .people { display: flex; flex-direction: column; overflow: visible; }
       .person-card { min-height: 88px; padding: 13px; }
       .header { display: grid; gap: 12px; }
       .title-row { align-items: flex-start; }
       .back-list { display: grid; }
       h2 { font-size: 28px; padding-top: 3px; }
-      .title-block p { display: none; }
       .actions {
         position: fixed;
         left: 0;
@@ -395,7 +393,6 @@
       <div class="brand">
         <div>
           <h1>育成カルテ</h1>
-          <p>スタッフごとの育成メモ。</p>
         </div>
         <button class="icon-button" id="addPerson" title="スタッフを追加" aria-label="スタッフを追加">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -425,7 +422,6 @@
             </button>
             <h2 id="screenTitle">スタッフ名</h2>
           </div>
-        <p id="screenSubtitle">育成テーマ、本人の願望、面談報告、育成オーダー、OKR。</p>
         </div>
         <div class="actions">
           <button class="button" id="duplicatePerson" type="button">複製</button>
@@ -536,7 +532,6 @@
       save: document.querySelector("#save"),
       search: document.querySelector("#search"),
       screenTitle: document.querySelector("#screenTitle"),
-      screenSubtitle: document.querySelector("#screenSubtitle"),
       metricCount: document.querySelector("#metricCount"),
       metricAlert: document.querySelector("#metricAlert"),
       metricUpdated: document.querySelector("#metricUpdated"),
@@ -975,7 +970,6 @@
       const person = activePerson();
       if (!person) {
         els.screenTitle.textContent = "スタッフを追加";
-        els.screenSubtitle.textContent = "";
         Object.values(els.fields).forEach((input) => {
           input.value = "";
         });
@@ -987,7 +981,6 @@
       const record = activeRecord(person);
       state.activeId = person.id;
       els.screenTitle.textContent = person.name || "未入力のスタッフ";
-      els.screenSubtitle.textContent = record.theme ? shortText(record.theme) : "育成テーマ、本人の願望、面談報告、育成オーダー、OKR。";
       profileFields.forEach((key) => {
         els.fields[key].value = person[key] ?? "";
       });
@@ -1152,8 +1145,6 @@
         renderPeople();
         renderMetrics();
         els.screenTitle.textContent = activePerson()?.name || "未入力のスタッフ";
-        const record = activeRecord();
-        els.screenSubtitle.textContent = record.theme ? shortText(record.theme) : "育成テーマ、本人の願望、面談報告、育成オーダー、OKR。";
       });
     });
     els.fields.periodMonth.addEventListener("change", () => {
