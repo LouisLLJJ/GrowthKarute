@@ -242,7 +242,7 @@
       overflow-wrap: anywhere;
     }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-    .summary-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .summary-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
     .metric {
       background: rgba(255, 255, 255, 0.86);
       border: 1px solid var(--line);
@@ -252,7 +252,7 @@
     }
     .metric span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
     .metric strong { font-size: 22px; letter-spacing: 0; }
-    .identity { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .identity { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
     .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
     .field-card {
       border: 1px solid var(--line);
@@ -265,19 +265,6 @@
     .field-card.wide { grid-column: 1 / -1; }
     .field-title { display: flex; align-items: center; gap: 9px; color: var(--ink); font-weight: 900; }
     .field-title svg { color: var(--brand); }
-    .progress-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 12px; align-items: center; }
-    input[type="range"] { padding: 0; accent-color: var(--brand); min-height: 34px; }
-    .progress-number {
-      text-align: center;
-      font-weight: 900;
-      color: var(--brand);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      height: 42px;
-      display: grid;
-      place-items: center;
-      background: var(--brand-soft);
-    }
     .footer { margin-top: 16px; color: var(--muted); font-size: 13px; }
     .toast {
       position: fixed;
@@ -336,7 +323,6 @@
       .editor { box-shadow: none; padding: 12px; }
       .field-card { padding: 12px; }
       textarea { min-height: 160px; }
-      .progress-row { grid-template-columns: minmax(0, 1fr) 64px; }
       .footer { display: grid; }
       .toast { left: 14px; right: 14px; bottom: calc(76px + env(safe-area-inset-bottom)); text-align: center; }
     }
@@ -347,7 +333,7 @@
     <form class="auth-card" id="loginForm">
       <div>
         <h1>育成カルテ</h1>
-        <p class="auth-sub" id="authLead">URLを開いた人が、自分のメールとパスワードで登録できます。</p>
+        <p class="auth-sub" id="authLead">メールとパスワードで入ります。</p>
       </div>
       <div class="auth-mode" aria-label="ログイン方法">
         <button class="active" id="showSignup" type="button">新規登録</button>
@@ -359,7 +345,7 @@
         <button class="button primary" id="authSubmit" type="submit">登録して入る</button>
         <button class="button" id="demoMode" type="button">デモとして開く</button>
       </div>
-      <p class="hint" id="authHint">院長にはURLだけ渡せます。院長本人が自分のメールで登録します。</p>
+      <p class="hint" id="authHint">初回は新規登録、2回目からログイン。</p>
     </form>
   </section>
 
@@ -368,7 +354,7 @@
       <div class="brand">
         <div>
           <h1>育成カルテ</h1>
-          <p>院長と共有する、スタッフごとの成長の方向性と想いの記録。</p>
+          <p>スタッフごとの育成メモ。</p>
         </div>
         <button class="icon-button" id="addPerson" title="スタッフを追加" aria-label="スタッフを追加">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -398,7 +384,7 @@
             </button>
             <h2 id="screenTitle">スタッフ名</h2>
           </div>
-          <p id="screenSubtitle">育成テーマ、願望、面談メモ、進捗、次の一手を院長と共有します。</p>
+        <p id="screenSubtitle">育成テーマ、本人の願望、面談報告、院長オーダー、OKR。</p>
         </div>
         <div class="actions">
           <button class="button" id="duplicatePerson" type="button">複製</button>
@@ -408,7 +394,6 @@
 
       <section class="summary-strip" aria-label="全体の状態">
         <div class="metric"><span>登録スタッフ</span><strong id="metricCount">0名</strong></div>
-        <div class="metric"><span>平均進捗</span><strong id="metricAverage">0%</strong></div>
         <div class="metric"><span>要確認</span><strong id="metricWatch">0名</strong></div>
         <div class="metric"><span>最終更新</span><strong id="metricUpdated">-</strong></div>
       </section>
@@ -425,6 +410,7 @@
             </select>
           </label>
           <label>最終面談日<input id="lastMeeting" type="date"></label>
+          <label>記録する月<input id="periodMonth" type="month"></label>
         </div>
         <div class="fields">
           <div class="field-card">
@@ -432,24 +418,20 @@
             <textarea id="theme" placeholder="今伸ばしたい役割、任せたい仕事、期待する姿"></textarea>
           </div>
           <div class="field-card">
-            <div class="field-title">願望</div>
-            <textarea id="wish" placeholder="本人が大事にしていそうなこと、働く動機、なりたい姿の仮説"></textarea>
+            <div class="field-title">本人の願望</div>
+            <textarea id="wish" placeholder="本人が大事にしていそうなこと、なりたい姿"></textarea>
           </div>
           <div class="field-card wide">
-            <div class="field-title">面談メモ</div>
-            <textarea id="memo" placeholder="話した内容、院長の見立て、自分の見立て、次回確認したいこと"></textarea>
+            <div class="field-title">面談報告</div>
+            <textarea id="interviewReport" placeholder="面談で話したこと、気づき"></textarea>
           </div>
           <div class="field-card">
-            <div class="field-title">進捗</div>
-            <div class="progress-row">
-              <input id="progress" type="range" min="0" max="100" step="5">
-              <div class="progress-number" id="progressValue">0%</div>
-            </div>
-            <textarea id="progressNote" placeholder="できていること、変化、気になるサイン"></textarea>
+            <div class="field-title">院長からのオーダー</div>
+            <textarea id="directorOrder" placeholder="院長から本人へ求めたいこと"></textarea>
           </div>
           <div class="field-card">
-            <div class="field-title">次の一手</div>
-            <textarea id="nextStep" placeholder="次に試す関わり、任せる仕事、院長と確認すること"></textarea>
+            <div class="field-title">OKR</div>
+            <textarea id="okr" placeholder="Objective / Key Results"></textarea>
           </div>
         </div>
         <div class="footer">
@@ -474,12 +456,15 @@
         name: "佐藤さん",
         status: "steady",
         lastMeeting: "2026-06-10",
-        theme: "後輩に基本手技を教える役割へ少しずつ広げる。本人の丁寧さを、チーム全体の標準化に活かしたい。",
-        wish: "患者さんに安心してもらえる存在でいたい気持ちが強い。認められる場面があると前向きに動ける。",
-        memo: "院長：最近の説明がわかりやすくなっている。\n自分：責任が増える場面では少し緊張が見える。小さく任せて成功体験を作る。",
-        progress: 70,
-        progressNote: "声かけは安定。後輩からの質問対応も増えている。忙しい時間帯はまだ抱え込みやすい。",
-        nextStep: "来週から新人のチェックリスト確認を一部任せる。院長から一言、任せたい理由を伝えてもらう。",
+        records: {
+          "2026-06": {
+            theme: "後輩に基本手技を教える役割へ少しずつ広げる。本人の丁寧さを、チーム全体の標準化に活かしたい。",
+            wish: "患者さんに安心してもらえる存在でいたい気持ちが強い。認められる場面があると前向きに動ける。",
+            interviewReport: "最近の説明がわかりやすくなっている。\n責任が増える場面では少し緊張が見える。小さく任せて成功体験を作る。",
+            directorOrder: "来週から新人のチェックリスト確認を一部任せる。任せたい理由も短く伝える。",
+            okr: "O: 後輩指導を一部任せられる状態にする\nKR: 新人チェックリスト確認を週2回担当\nKR: 質問対応後に要点を1つ共有"
+          }
+        },
         updatedAt: Date.now()
       },
       {
@@ -487,12 +472,15 @@
         name: "鈴木さん",
         status: "watch",
         lastMeeting: "2026-06-04",
-        theme: "基礎業務の安定化。質問しやすい状態を保ちながら、できる範囲を明確に増やす。",
-        wish: "失敗せずに迷惑をかけたくない気持ちが強そう。安心して確認できる関係性が先に必要。",
-        memo: "最近質問が減っている。理解が進んだ可能性もあるが、遠慮している可能性もある。次回は困る場面を具体的に聞く。",
-        progress: 45,
-        progressNote: "基本動作は改善。判断が必要な場面で止まりやすい。表情が硬い日がある。",
-        nextStep: "終業前に5分だけ確認時間を作る。できたことを先に確認してから、迷った場面を聞く。",
+        records: {
+          "2026-06": {
+            theme: "基礎業務の安定化。質問しやすい状態を保ちながら、できる範囲を明確に増やす。",
+            wish: "失敗せずに迷惑をかけたくない気持ちが強そう。安心して確認できる関係性が先に必要。",
+            interviewReport: "最近質問が減っている。理解が進んだ可能性もあるが、遠慮している可能性もある。次回は困る場面を具体的に聞く。",
+            directorOrder: "終業前に5分だけ確認時間を作る。できたことを先に確認してから、迷った場面を聞く。",
+            okr: "O: 基礎業務を安心して進められる状態にする\nKR: 迷った場面を週1回言語化\nKR: 確認が必要な判断を3つ整理"
+          }
+        },
         updatedAt: Date.now() - 86400000
       }
     ];
@@ -534,7 +522,6 @@
       screenTitle: document.querySelector("#screenTitle"),
       screenSubtitle: document.querySelector("#screenSubtitle"),
       metricCount: document.querySelector("#metricCount"),
-      metricAverage: document.querySelector("#metricAverage"),
       metricWatch: document.querySelector("#metricWatch"),
       metricUpdated: document.querySelector("#metricUpdated"),
       saveState: document.querySelector("#saveState"),
@@ -547,15 +534,59 @@
         name: document.querySelector("#name"),
         status: document.querySelector("#status"),
         lastMeeting: document.querySelector("#lastMeeting"),
+        periodMonth: document.querySelector("#periodMonth"),
         theme: document.querySelector("#theme"),
         wish: document.querySelector("#wish"),
-        memo: document.querySelector("#memo"),
-        progress: document.querySelector("#progress"),
-        progressNote: document.querySelector("#progressNote"),
-        nextStep: document.querySelector("#nextStep")
-      },
-      progressValue: document.querySelector("#progressValue")
+        interviewReport: document.querySelector("#interviewReport"),
+        directorOrder: document.querySelector("#directorOrder"),
+        okr: document.querySelector("#okr")
+      }
     };
+
+    const profileFields = ["name", "status", "lastMeeting"];
+    const recordFields = ["theme", "wish", "interviewReport", "directorOrder", "okr"];
+
+    function currentMonth() {
+      return new Date().toISOString().slice(0, 7);
+    }
+    function monthFromDate(dateValue) {
+      return dateValue ? String(dateValue).slice(0, 7) : currentMonth();
+    }
+    function emptyRecord() {
+      return { theme: "", wish: "", interviewReport: "", directorOrder: "", okr: "" };
+    }
+    function ensurePersonShape(person) {
+      if (!person.records || Array.isArray(person.records) || typeof person.records !== "object") {
+        const month = monthFromDate(person.lastMeeting);
+        person.records = {
+          [month]: {
+            theme: person.theme || "",
+            wish: person.wish || "",
+            interviewReport: person.interviewReport || person.memo || "",
+            directorOrder: person.directorOrder || person.nextStep || "",
+            okr: person.okr || ""
+          }
+        };
+      }
+      person.activeMonth = person.activeMonth || monthFromDate(person.lastMeeting);
+      if (!person.records[person.activeMonth]) person.records[person.activeMonth] = emptyRecord();
+      delete person.theme;
+      delete person.wish;
+      delete person.memo;
+      delete person.progress;
+      delete person.progressNote;
+      delete person.nextStep;
+      return person;
+    }
+    function normalizePeople(people) {
+      return (Array.isArray(people) ? people : initialPeople).map(ensurePersonShape);
+    }
+    function activeRecord(person = activePerson()) {
+      if (!person) return emptyRecord();
+      ensurePersonShape(person);
+      if (!person.records[person.activeMonth]) person.records[person.activeMonth] = emptyRecord();
+      return person.records[person.activeMonth];
+    }
 
     function showApp() {
       els.authScreen.classList.add("hidden");
@@ -576,7 +607,7 @@
     }
     function loadLocal() {
       const saved = localStorage.getItem(storageKey);
-      state.people = saved ? JSON.parse(saved) : initialPeople;
+      state.people = normalizePeople(saved ? JSON.parse(saved) : initialPeople);
       state.activeId = state.people[0]?.id || "";
     }
     function saveLocal(showToast = false) {
@@ -676,9 +707,9 @@
       const data = await requestSupabase(`/rest/v1/growth_karute_documents?id=eq.${docId}&select=people`);
       const row = Array.isArray(data) ? data[0] : null;
       if (Array.isArray(row?.people)) {
-        state.people = row.people;
+        state.people = normalizePeople(row.people);
       } else {
-        state.people = initialPeople;
+        state.people = normalizePeople(initialPeople);
         await saveRemote(false);
       }
       state.activeId = state.people[0]?.id || "";
@@ -760,7 +791,10 @@
     }
     function renderPeople() {
       const query = state.query.trim().toLowerCase();
-      const filtered = state.people.filter((person) => [person.name, person.theme, person.wish, person.nextStep].join(" ").toLowerCase().includes(query));
+      const filtered = state.people.filter((person) => {
+        const record = activeRecord(person);
+        return [person.name, record.theme, record.wish, record.directorOrder, record.okr].join(" ").toLowerCase().includes(query);
+      });
       els.people.innerHTML = "";
       filtered.forEach((person) => {
         const card = document.createElement("button");
@@ -774,7 +808,8 @@
           <div class="person-summary"></div>
         `;
         card.querySelector(".person-name").textContent = person.name || "未入力";
-        card.querySelector(".person-summary").textContent = shortText(person.theme || person.nextStep);
+        const record = activeRecord(person);
+        card.querySelector(".person-summary").textContent = shortText(record.theme || record.directorOrder || record.okr);
         card.addEventListener("click", () => {
           saveActiveFromForm();
           state.activeId = person.id;
@@ -787,21 +822,24 @@
     function renderForm() {
       const person = activePerson();
       if (!person) return;
+      ensurePersonShape(person);
+      const record = activeRecord(person);
       state.activeId = person.id;
       els.screenTitle.textContent = person.name || "未入力のスタッフ";
-      els.screenSubtitle.textContent = person.theme ? shortText(person.theme) : "育成テーマ、願望、面談メモ、進捗、次の一手を記録します。";
-      Object.entries(els.fields).forEach(([key, input]) => {
-        input.value = person[key] ?? "";
+      els.screenSubtitle.textContent = record.theme ? shortText(record.theme) : "育成テーマ、本人の願望、面談報告、院長オーダー、OKR。";
+      profileFields.forEach((key) => {
+        els.fields[key].value = person[key] ?? "";
       });
-      els.progressValue.textContent = `${person.progress || 0}%`;
+      els.fields.periodMonth.value = person.activeMonth || currentMonth();
+      recordFields.forEach((key) => {
+        els.fields[key].value = record[key] ?? "";
+      });
     }
     function renderMetrics() {
       const count = state.people.length;
-      const average = count ? Math.round(state.people.reduce((sum, person) => sum + Number(person.progress || 0), 0) / count) : 0;
       const watch = state.people.filter((person) => person.status !== "steady").length;
       const latest = state.people.reduce((max, person) => Math.max(max, Number(person.updatedAt || 0)), 0);
       els.metricCount.textContent = `${count}名`;
-      els.metricAverage.textContent = `${average}%`;
       els.metricWatch.textContent = `${watch}名`;
       els.metricUpdated.textContent = latest ? new Date(latest).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "-";
     }
@@ -815,8 +853,17 @@
     function saveActiveFromForm() {
       const person = activePerson();
       if (!person) return;
-      Object.entries(els.fields).forEach(([key, input]) => {
-        person[key] = key === "progress" ? Number(input.value) : input.value;
+      ensurePersonShape(person);
+      profileFields.forEach((key) => {
+        const input = els.fields[key];
+        person[key] = input.value;
+      });
+      const month = els.fields.periodMonth.value || currentMonth();
+      person.activeMonth = month;
+      if (!person.records[month]) person.records[month] = emptyRecord();
+      const record = person.records[month];
+      recordFields.forEach((key) => {
+        record[key] = els.fields[key].value;
       });
       person.updatedAt = Date.now();
       persist(false);
@@ -828,12 +875,8 @@
         name: "新しいスタッフ",
         status: "steady",
         lastMeeting: "",
-        theme: "",
-        wish: "",
-        memo: "",
-        progress: 0,
-        progressNote: "",
-        nextStep: "",
+        activeMonth: currentMonth(),
+        records: { [currentMonth()]: emptyRecord() },
         updatedAt: Date.now()
       };
       state.people.unshift(person);
@@ -846,7 +889,13 @@
       saveActiveFromForm();
       const person = activePerson();
       if (!person) return;
-      const copy = { ...person, id: crypto.randomUUID(), name: `${person.name || "スタッフ"} のコピー`, updatedAt: Date.now() };
+      const copy = {
+        ...person,
+        records: JSON.parse(JSON.stringify(person.records || {})),
+        id: crypto.randomUUID(),
+        name: `${person.name || "スタッフ"} のコピー`,
+        updatedAt: Date.now()
+      };
       state.people.unshift(copy);
       state.activeId = copy.id;
       persist(true);
@@ -875,21 +924,32 @@
       els.authSubmit.textContent = signup ? "登録して入る" : "ログイン";
       els.password.placeholder = signup ? "6文字以上で設定" : "登録したパスワード";
       els.authLead.textContent = signup
-        ? "URLを開いた人が、自分のメールとパスワードで登録できます。"
-        : "登録済みのメールとパスワードでログインします。";
+        ? "メールとパスワードで入ります。"
+        : "登録済みの情報で入ります。";
       els.authHint.textContent = signup
-        ? "院長にはURLだけ渡せます。院長本人が自分のメールで登録します。"
-        : "すでに登録済みの場合はこちらから入れます。";
+        ? "初回は新規登録、2回目からログイン。"
+        : "メールとパスワードを入力してください。";
     }
 
-    Object.values(els.fields).forEach((field) => {
+    Object.values(els.fields).filter((field) => field !== els.fields.periodMonth).forEach((field) => {
       field.addEventListener("input", () => {
-        if (field.id === "progress") els.progressValue.textContent = `${field.value}%`;
         saveActiveFromForm();
         renderPeople();
         renderMetrics();
         els.screenTitle.textContent = activePerson()?.name || "未入力のスタッフ";
+        const record = activeRecord();
+        els.screenSubtitle.textContent = record.theme ? shortText(record.theme) : "育成テーマ、本人の願望、面談報告、院長オーダー、OKR。";
       });
+    });
+    els.fields.periodMonth.addEventListener("change", () => {
+      const person = activePerson();
+      if (!person) return;
+      ensurePersonShape(person);
+      person.activeMonth = els.fields.periodMonth.value || currentMonth();
+      if (!person.records[person.activeMonth]) person.records[person.activeMonth] = emptyRecord();
+      person.updatedAt = Date.now();
+      persist(false);
+      render();
     });
     els.addPerson.addEventListener("click", addPerson);
     els.duplicatePerson.addEventListener("click", duplicatePerson);
