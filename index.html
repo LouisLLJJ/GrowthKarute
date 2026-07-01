@@ -399,7 +399,7 @@
 
       <section class="summary-strip" aria-label="全体">
         <div class="metric"><span>登録スタッフ</span><strong id="metricCount">0名</strong></div>
-        <div class="metric"><span>ゆらぎあり</span><strong id="metricAlert">0名</strong></div>
+        <div class="metric"><span>不健全寄り</span><strong id="metricAlert">0名</strong></div>
         <div class="metric"><span>最終更新</span><strong id="metricUpdated">-</strong></div>
       </section>
 
@@ -407,11 +407,11 @@
         <div class="identity">
           <label>スタッフ名<input id="name"></label>
           <label>
-            コンディション
+            健全度
             <select id="condition">
-              <option value="stable">安定</option>
-              <option value="care">ゆらぎ</option>
-              <option value="risk">しんどそう</option>
+              <option value="stable">健全</option>
+              <option value="care">やや不健全</option>
+              <option value="risk">不健全</option>
             </select>
           </label>
           <label>見る月<input id="periodMonth" type="month"></label>
@@ -777,7 +777,7 @@
       return state.people.find((person) => person.id === state.activeId) || state.people[0];
     }
     function conditionLabel(value) {
-      return { stable: "安定", care: "ゆらぎ", risk: "しんどそう" }[value] || "安定";
+      return { stable: "健全", care: "やや不健全", risk: "不健全" }[value] || "健全";
     }
     function conditionRank(value) {
       return { stable: 0, care: 1, risk: 2 }[value] || 0;
