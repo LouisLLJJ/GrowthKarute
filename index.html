@@ -376,7 +376,7 @@
     <form class="auth-card" id="loginForm">
       <div>
         <h1>育成カルテ</h1>
-        <p class="auth-sub" id="authLead">メールとパスワードで入ります。</p>
+        <p class="auth-sub" id="authLead">登録済みのメールで入ります。</p>
       </div>
       <label>メールアドレス<input id="email" type="email" autocomplete="email" placeholder="name@example.com"></label>
       <label>パスワード<input id="password" type="password" autocomplete="current-password" placeholder="6文字以上で設定"></label>
@@ -384,7 +384,7 @@
         <button class="button primary" id="authSubmit" type="submit">入る</button>
         <button class="button" id="demoMode" type="button">デモとして開く</button>
       </div>
-      <p class="hint" id="authHint">メールとパスワードを入力してください。</p>
+      <p class="hint" id="authHint">許可されたアカウントだけ入れます。</p>
     </form>
   </section>
 
@@ -771,29 +771,8 @@
       saveSession(session);
       return session.user;
     }
-    async function signUp(email, password) {
-      const redirectTo = `${window.location.origin}${window.location.pathname}`;
-      const result = await requestSupabase(`/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`, {
-        method: "POST",
-        body: JSON.stringify({ email, password })
-      }, false);
-      if (result?.access_token) {
-        saveSession(result);
-        return result.user;
-      }
-      if (result?.user || result?.id || result?.email) {
-        throw new Error("確認メールが届いた場合は、メール内のリンクを開いてください。");
-      }
-      throw new Error("登録できませんでした。");
-    }
     async function enterWithEmail(email, password) {
-      try {
-        return await signIn(email, password);
-      } catch (error) {
-        const message = String(error.message || "");
-        if (!/invalid|credential|not found|login|メール|認証/i.test(message)) throw error;
-      }
-      return signUp(email, password);
+      return signIn(email, password);
     }
     async function loadRemote() {
       const data = await requestSupabase(`/rest/v1/growth_karute_documents?id=eq.${docId}&select=people`);
@@ -1133,10 +1112,18 @@
     async function bootUser(user) {
       state.demo = false;
       state.user = user;
-      await loadRemote();
-      subscribeRemote();
-      showApp();
-      persist(false);
+      try {
+        await loadRemote();
+        subscribeRemote();
+        showApp();
+        persist(false);
+      } catch (error) {
+        localStorage.removeItem(`${storageKey}-session`);
+        state.session = null;
+        state.user = null;
+        showAuth();
+        els.authHint.textContent = error.message || "許可されたアカウントでログインしてください。";
+      }
     }
     Object.values(els.fields).filter((field) => field !== els.fields.periodMonth).forEach((field) => {
       field.addEventListener("input", () => {
@@ -1190,7 +1177,7 @@
       const email = els.email.value.trim();
       const password = els.password.value;
       if (!email || password.length < 6) {
-        els.authHint.textContent = "メールアドレスと6文字以上のパスワードを入力してください。";
+        els.authHint.textContent = "登録済みのメールと6文字以上のパスワードを入力してください。";
         return;
       }
       els.authSubmit.disabled = true;
@@ -1199,7 +1186,7 @@
         const user = await enterWithEmail(email, password);
         await bootUser(user);
       } catch (error) {
-        els.authHint.textContent = error.message || "処理できませんでした。入力内容を確認してください。";
+        els.authHint.textContent = error.message || "登録済みのメールとパスワードを確認してください。";
       } finally {
         els.authSubmit.disabled = false;
       }
