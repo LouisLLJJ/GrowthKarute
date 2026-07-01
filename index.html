@@ -993,7 +993,7 @@
     }
     function renderMetrics() {
       const count = state.people.length;
-      const alert = state.people.filter((person) => ["care", "risk"].includes(person.condition)).length;
+      const alert = state.people.filter((person) => person.condition === "risk").length;
       const latest = state.people.reduce((max, person) => Math.max(max, Number(person.updatedAt || 0)), 0);
       els.metricCount.textContent = `${count}名`;
       els.metricAlert.textContent = `${alert}名`;
