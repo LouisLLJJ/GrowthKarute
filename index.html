@@ -1013,9 +1013,22 @@
       updateSyncState();
       setMobileView(state.mobileView);
     }
+    function createPersonFromForm() {
+      const month = els.fields.periodMonth.value || currentMonth();
+      const person = {
+        id: crypto.randomUUID(),
+        name: els.fields.name.value.trim() || "新しいスタッフ",
+        condition: els.fields.condition.value || "stable",
+        activeMonth: month,
+        records: { [month]: emptyRecord() },
+        updatedAt: Date.now()
+      };
+      state.people.unshift(person);
+      state.activeId = person.id;
+      return person;
+    }
     function saveActiveFromForm() {
-      const person = activePerson();
-      if (!person) return;
+      const person = activePerson() || createPersonFromForm();
       ensurePersonShape(person);
       profileFields.forEach((key) => {
         const input = els.fields[key];
@@ -1032,7 +1045,7 @@
       persist(false);
     }
     function addPerson() {
-      saveActiveFromForm();
+      if (activePerson()) saveActiveFromForm();
       const person = {
         id: crypto.randomUUID(),
         name: "新しいスタッフ",
@@ -1066,6 +1079,8 @@
       });
       person.updatedAt = Date.now();
       persist(true);
+      renderPeople();
+      renderMetrics();
       renderForm();
     }
     function addOrderEntry() {
@@ -1086,6 +1101,8 @@
       });
       person.updatedAt = Date.now();
       persist(true);
+      renderPeople();
+      renderMetrics();
       renderForm();
     }
     function deleteHistoryEntry(kind, id) {
